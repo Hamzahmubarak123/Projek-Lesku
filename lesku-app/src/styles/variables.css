@@ -1,0 +1,31 @@
+/* ============================================================
+   VARIABLES.CSS
+   Semua warna, jarak, dan token desain. Ganti tema di sini saja
+   tanpa perlu menyentuh file CSS lainnya.
+   ============================================================ */
+:root{
+  --primary:#F6C343;
+  --primary-2:#FFE08A;
+  --bg:#FFF9E7;
+  --surface:#FFFFFF;
+  --surface-2:#FFF2C2;
+  --text:#4A3216;
+  --muted:#7A684F;
+  --line:#F3E1A6;
+  --accent:#7DA66B;
+  --danger:#EF4444;
+  --warning:#F59E0B;
+  --success:#22C55E;
+  --info:#2563EB;
+  --shadow:0 18px 45px rgba(36,59,53,.10);
+  --shadow-soft:0 10px 25px rgba(36,59,53,.08);
+  --radius:22px;
+  --radius-sm:14px;
+  --sidebar:292px;
+}
+[data-theme="yellow"]{--primary:#F6C343;--primary-2:#FFE08A;--bg:#FFF9E7;--surface-2:#FFF2C2;--text:#4A3216;--muted:#7A684F;--line:#F3E1A6;--accent:#7DA66B}
+[data-theme="sage"]{--primary:#4F9D69;--primary-2:#A7D7C5;--bg:#F7FBF8;--surface-2:#EFF8F2;--text:#243B35;--muted:#6B7D76;--line:#DDEBE3;--accent:#F2C94C}
+[data-theme="blue"]{--primary:#2563EB;--primary-2:#93C5FD;--bg:#F8FAFC;--surface-2:#EFF6FF;--text:#1E293B;--muted:#64748B;--line:#DBEAFE;--accent:#22C55E}
+[data-theme="lavender"]{--primary:#7C3AED;--primary-2:#C4B5FD;--bg:#FAF7FF;--surface-2:#F3EFFF;--text:#2E2545;--muted:#73678F;--line:#E9D5FF;--accent:#F59E0B}
+[data-theme="peach"]{--primary:#F97316;--primary-2:#FDBA74;--bg:#FFF7ED;--surface-2:#FFEDD5;--text:#1F2937;--muted:#7C6A5B;--line:#FED7AA;--accent:#10B981}
+[data-theme="rose"]{--primary:#E11D48;--primary-2:#FDA4AF;--bg:#FFF5F7;--surface-2:#FFE4E8;--text:#312E37;--muted:#7A6870;--line:#FECDD3;--accent:#14B8A6}
