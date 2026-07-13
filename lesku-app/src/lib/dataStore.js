@@ -25,7 +25,7 @@ const DEMO_STORAGE_KEY = 'lesku_demo_v1';
 const ENTITY_TABLE = {
   students: 'students', classes: 'classes', enrollments: 'enrollments',
   schedules: 'schedules', attendance: 'attendance', learning: 'learning',
-  assessments: 'assessments', payments: 'payments'
+  assessments: 'assessments', payments: 'payments', expenses: 'expenses'
 };
 
 // ---------- Data contoh untuk Mode Demo (dipakai kalau localStorage kosong) ----------
@@ -58,6 +58,7 @@ function seedDemoState() {
     ],
     learning: [],
     assessments: [],
+    expenses: [],
     payments: [
       { id: uid('pay'), invoiceNo: 'INV-' + new Date().getFullYear() + '-001', date: today, type: 'Pemasukan', studentId: s1, classId: c2, period: 'Bulan ini', packageType: 'Paket 8x Pertemuan / Bulan', amount: 450000, paid: 0, method: 'Transfer', dueDate: today, status: 'Belum Lunas', note: '' }
     ]
