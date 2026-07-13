@@ -61,9 +61,8 @@ window.__lesku_sendInvoiceWA = async () => {
   const p = await selectedPayment();
   if (!p) return;
   const students = await store.list('students');
-  const settings = await store.getSettings();
   const s = students.find((x) => x.id === p.studentId) || {};
-  const msg = `Assalamu'alaikum Bapak/Ibu ${s.parentName || ''}, berikut invoice pembayaran les ${settings.institutionName || 'LesKu'} untuk Ananda ${s.name || ''}.\n\nNomor Invoice: ${p.invoiceNo || '-'}\nPeriode: ${p.period || '-'}\nTagihan: ${rupiah(p.amount)}\nSudah dibayar: ${rupiah(p.paid)}\nSisa: ${rupiah(Number(p.amount || 0) - Number(p.paid || 0))}\nStatus: ${p.status || '-'}\nJatuh tempo: ${fmtDate(p.dueDate)}\n\nTerima kasih.`;
+  const msg = `Assalamu'alaikum Bapak/Ibu ${s.parentName || ''}, berikut invoice pembayaran les Ananda ${s.name || ''} (${p.invoiceNo || '-'}). Mohon dicek lampiran gambar/PDF-nya. Terima kasih.`;
   window.open(waLink(s.parentPhone, msg), '_blank');
 };
 
