@@ -3,7 +3,11 @@
 -- Jalankan HANYA SEKALI, di 1 Supabase project TERPISAH yang
 -- kamu (Mubarak) pegang sendiri sebagai "License Server".
 -- Project ini TIDAK PERNAH menyimpan data siswa/klien - isinya
--- cuma status lisensi tiap instalasi LesKu.
+-- cuma status lisensi + LOGIN GATE tiap instalasi LesKu.
+--
+-- Sistem ini sekaligus jadi "gerbang login": guru masuk pakai
+-- email+password yang tersimpan di Supabase Auth PROJECT INI,
+-- bukan di Supabase milik klien.
 -- ============================================================
 
 create table clients (
@@ -18,7 +22,7 @@ create table clients (
 create table licenses (
   id uuid primary key default gen_random_uuid(),
   client_id uuid references clients(id) on delete cascade,
-  license_key text unique not null,       -- dipakai app lewat VITE_LICENSE_KEY
+  user_id uuid references auth.users(id) on delete cascade,  -- akun login guru (dibuat di Authentication > Users)
   status text not null default 'demo',    -- 'demo' | 'active' | 'blocked'
   supabase_project_url text,              -- diisi saat provisioning (status jadi 'active')
   supabase_anon_key text,
@@ -27,28 +31,39 @@ create table licenses (
   updated_at timestamptz default now()
 );
 
--- RLS: license_key dicek lewat anon key PUBLIK dari app klien manapun,
--- jadi policy read-nya sengaja dibuka (tidak butuh login) - tapi HANYA
--- kolom yang perlu, dan tidak ada data sensitif klien di sini.
+-- ============================================================
+-- ROW LEVEL SECURITY
+-- Guru yang login HANYA boleh lihat baris lisensi MILIKNYA SENDIRI
+-- (dicocokkan lewat user_id = akun yang sedang login). Tidak ada
+-- siapa pun (termasuk guru lain) yang bisa lihat data klien lain.
+-- ============================================================
 alter table licenses enable row level security;
-create policy "Siapa saja boleh cek status lisensi" on licenses for select using (true);
+create policy "User hanya bisa lihat lisensi miliknya sendiri" on licenses
+  for select using (auth.uid() = user_id);
 
--- Insert/update HANYA lewat dashboard Supabase kamu sendiri (sebagai admin),
--- bukan lewat app - jadi tidak perlu policy insert/update untuk anon.
+-- Insert/update/delete licenses HANYA lewat dashboard Supabase kamu
+-- sendiri (sebagai admin), sengaja TIDAK ada policy untuk itu di sini
+-- supaya guru tidak bisa ubah statusnya sendiri lewat aplikasi.
 
--- Contoh isi data saat provisioning klien baru:
--- insert into clients (nama_guru, nama_lembaga, email, no_wa)
---   values ('Bu Guru SD', 'Lembaga Les A', 'guru@email.com', '628xxxxxxxx');
+-- ============================================================
+-- CARA PROVISIONING KLIEN BARU (dari dashboard Supabase kamu):
+-- ============================================================
+-- 1. Authentication > Users > Add user
+--    - Email: email guru
+--    - Password: buatkan password, simpan di password manager
+--    - Centang "Auto Confirm User"
+--    - Setelah dibuat, COPY User UID-nya (dibutuhkan di langkah 3)
 --
--- insert into licenses (client_id, license_key, status)
---   values ('<id dari clients di atas>', 'lesku-klien-001', 'demo');
+-- 2. Table Editor > clients > Insert row
+--    - nama_guru, nama_lembaga, email, no_wa
 --
--- Setelah klien lunas, tinggal update:
--- update licenses set status='active',
---   supabase_project_url='https://xxxx.supabase.co',
---   supabase_anon_key='eyJ...',
---   tanggal_lunas=current_date
--- where license_key='lesku-klien-001';
+-- 3. Table Editor > licenses > Insert row
+--    - client_id: pilih dari langkah 2
+--    - user_id: paste User UID dari langkah 1
+--    - status: 'active' (kalau sudah lunas) atau 'demo' (kalau masih trial)
+--    - supabase_project_url & supabase_anon_key: dari project Supabase KLIEN
+--      (Settings > API di project klien tersebut)
 --
--- Kalau perlu blokir:
--- update licenses set status='blocked', catatan='Menunggu pelunasan' where license_key='lesku-klien-001';
+-- Kalau perlu blokir suatu saat: tinggal ubah kolom "status" jadi 'blocked'
+-- di baris lisensi klien itu - guru langsung tidak bisa login lagi.
+-- ============================================================
