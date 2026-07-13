@@ -3,10 +3,15 @@
 -- Jalankan file ini di Supabase SQL Editor SETIAP KALI provisioning
 -- klien baru (1 project Supabase = 1 klien/guru).
 --
+-- CATATAN: akun login guru (email+password) dibuat di project
+-- LICENSE SERVER (lihat license-schema.sql), BUKAN di project ini.
+-- Project ini murni penyimpanan data (siswa, kelas, dst).
+--
 -- Setelah dijalankan, jangan lupa:
--- 1. Buat 1 user lewat Authentication > Users (email guru)
--- 2. Catat Project URL & anon key -> masukkan ke tabel `licenses`
---    di License Server (lihat license-schema.sql)
+-- 1. Catat Project URL & anon key (Settings > API di project ini)
+-- 2. Masukkan ke tabel `licenses` di License Server, sekaligus
+--    buat akun login guru di sana (lihat langkah lengkap di
+--    license-schema.sql)
 -- ============================================================
 
 create extension if not exists "pgcrypto";
@@ -115,6 +120,7 @@ create table payments (
   package_type text,
   amount numeric default 0,
   paid numeric default 0,
+  paid_date date,
   method text,
   due_date date,
   status text default 'Belum Lunas',
@@ -137,9 +143,18 @@ insert into settings (id) values (1);
 
 -- ============================================================
 -- ROW LEVEL SECURITY
--- Wajib aktif: hanya user yang sudah login (guru) yang boleh
--- baca/tulis data. Karena 1 project = 1 klien, cukup 1 aturan
--- sederhana "harus login", tidak perlu pemisahan tenant_id.
+-- CATATAN PENTING: mulai versi ini, gerbang LOGIN (email+password)
+-- ada di LICENSE SERVER (project terpisah), BUKAN di project ini.
+-- Guru login di License Server -> baru dikasih anon key project
+-- klien ini oleh aplikasi. Jadi project ini sendiri tidak perlu
+-- Supabase Auth-nya sendiri lagi.
+--
+-- Konsekuensinya: RLS di sini dibuka untuk anon key (bukan
+-- mensyaratkan auth.role()='authenticated' seperti sebelumnya),
+-- karena verifikasi "siapa boleh masuk" sudah terjadi SEBELUM
+-- anon key ini pernah sampai ke browser guru. Anon key TIDAK
+-- pernah dipublikasikan di tempat lain selain lewat proses
+-- login yang sudah terverifikasi itu.
 -- ============================================================
 alter table students enable row level security;
 alter table classes enable row level security;
@@ -151,12 +166,12 @@ alter table assessments enable row level security;
 alter table payments enable row level security;
 alter table settings enable row level security;
 
-create policy "Guru login bisa akses semua data" on students for all using (auth.role() = 'authenticated');
-create policy "Guru login bisa akses semua data" on classes for all using (auth.role() = 'authenticated');
-create policy "Guru login bisa akses semua data" on enrollments for all using (auth.role() = 'authenticated');
-create policy "Guru login bisa akses semua data" on schedules for all using (auth.role() = 'authenticated');
-create policy "Guru login bisa akses semua data" on attendance for all using (auth.role() = 'authenticated');
-create policy "Guru login bisa akses semua data" on learning for all using (auth.role() = 'authenticated');
-create policy "Guru login bisa akses semua data" on assessments for all using (auth.role() = 'authenticated');
-create policy "Guru login bisa akses semua data" on payments for all using (auth.role() = 'authenticated');
-create policy "Guru login bisa akses semua data" on settings for all using (auth.role() = 'authenticated');
+create policy "Akses via anon key (sudah lolos gerbang License Server)" on students for all using (true);
+create policy "Akses via anon key (sudah lolos gerbang License Server)" on classes for all using (true);
+create policy "Akses via anon key (sudah lolos gerbang License Server)" on enrollments for all using (true);
+create policy "Akses via anon key (sudah lolos gerbang License Server)" on schedules for all using (true);
+create policy "Akses via anon key (sudah lolos gerbang License Server)" on attendance for all using (true);
+create policy "Akses via anon key (sudah lolos gerbang License Server)" on learning for all using (true);
+create policy "Akses via anon key (sudah lolos gerbang License Server)" on assessments for all using (true);
+create policy "Akses via anon key (sudah lolos gerbang License Server)" on payments for all using (true);
+create policy "Akses via anon key (sudah lolos gerbang License Server)" on settings for all using (true);
