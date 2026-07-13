@@ -55,3 +55,29 @@ export function toast(msg) {
 export function safeFileName(s) {
   return String(s || 'dokumen').toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
 }
+
+// ---------- Konversi nama field: JS pakai camelCase, tabel Supabase
+// pakai snake_case. Dipakai otomatis oleh dataStore.js saat Mode Live,
+// supaya kode halaman tidak perlu tahu-menahu soal perbedaan ini. ----------
+export function toSnakeCase(str) {
+  return str.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+}
+
+export function toCamelCase(str) {
+  return str.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+}
+
+export function keysToSnake(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const out = {};
+  for (const k in obj) out[toSnakeCase(k)] = obj[k];
+  return out;
+}
+
+export function keysToCamel(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(keysToCamel);
+  const out = {};
+  for (const k in obj) out[toCamelCase(k)] = obj[k];
+  return out;
+}
