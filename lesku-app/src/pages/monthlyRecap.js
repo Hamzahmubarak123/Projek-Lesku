@@ -7,6 +7,7 @@
 // ============================================================
 import { byId, rupiah, escapeHtml, monthKey, todayISO, waLink, toast, uid } from '../lib/utils.js';
 import * as store from '../lib/dataStore.js';
+import { openForm } from '../lib/crud.js';
 
 const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -99,6 +100,7 @@ async function renderTable(month) {
       ? `<button class="btn small soft" onclick="window.__lesku_recapReminderWA('${p.id}')">💬 Reminder</button>`
       : '';
     const invoiceBtn = `<button class="btn small" onclick="window.__lesku_previewInvoiceFor('${p.id}')">🧾 Invoice</button>`;
+    const editBtn = `<button class="btn small ghost" onclick="window.__lesku_editRecapPayment('${p.id}')">✏️ Koreksi</button>`;
     return `<tr>
       <td><input type="checkbox" ${isLunas ? 'checked disabled' : ''} onchange="window.__lesku_markLunas('${p.id}', this)" style="width:18px;height:18px;cursor:${isLunas ? 'default' : 'pointer'}"></td>
       <td><b>${escapeHtml(studentName(p.studentId))}</b></td>
@@ -106,7 +108,7 @@ async function renderTable(month) {
       <td>${rupiah(p.amount)}</td>
       <td>${statusBadge}</td>
       <td>${p.paidDate ? p.paidDate : '<span class="muted">-</span>'}</td>
-      <td class="tdActions">${invoiceBtn}${waBtn}</td>
+      <td class="tdActions">${invoiceBtn}${waBtn}${editBtn}</td>
     </tr>`;
   }).join('');
 
@@ -141,7 +143,7 @@ window.__lesku_markLunas = async (paymentId, checkboxEl) => {
   const students = await store.list('students');
   const name = (students.find((s) => s.id === p.studentId) || {}).name || 'siswa ini';
 
-  const confirmed = confirm(`Yakin ${name} sudah membayar tagihan sebesar ${rupiah(p.amount)}?\n\nSetelah dikonfirmasi, status akan terkunci dan tidak bisa diubah lewat halaman ini lagi.`);
+  const confirmed = confirm(`Yakin ${name} sudah membayar tagihan sebesar ${rupiah(p.amount)}?\n\nSetelah dikonfirmasi, centang ini akan terkunci (supaya tidak berubah tidak sengaja). Kalau ternyata salah klik, tetap bisa diperbaiki lewat tombol "✏️ Koreksi" di baris ini.`);
   if (!confirmed) {
     checkboxEl.checked = false;
     return;
@@ -162,6 +164,13 @@ window.__lesku_markLunas = async (paymentId, checkboxEl) => {
   }
   const month = byId('recapMonth')?.value || currentMonthValue();
   await renderTable(month);
+};
+
+window.__lesku_editRecapPayment = (paymentId) => {
+  openForm('payments', paymentId, () => {
+    const month = byId('recapMonth')?.value || currentMonthValue();
+    return renderTable(month);
+  });
 };
 
 window.__lesku_recapReminderWA = async (paymentId) => {
