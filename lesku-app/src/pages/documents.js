@@ -140,6 +140,6 @@ window.__lesku_sendDocWA = async () => {
   const settings = await store.getSettings();
   const s = students.find((x) => x.id === sid) || {};
   if (!s.parentPhone) return window.__lesku_toast ? window.__lesku_toast('Nomor WhatsApp orang tua belum tersedia.') : alert('Nomor WhatsApp orang tua belum tersedia.');
-  const msg = `Assalamu'alaikum Bapak/Ibu ${s.parentName || ''}, berikut ${t} dari ${settings.institutionName || 'Nama Lembaga Les'} untuk Ananda ${s.name || ''}. Dokumen PNG/PDF dapat dilampirkan setelah diunduh dari aplikasi. Terima kasih.`;
+  const msg = `Assalamu'alaikum Bapak/Ibu ${s.parentName || ''}, berikut ${t} Ananda ${s.name || ''} dari ${settings.institutionName || 'Nama Lembaga Les'}. Mohon dicek lampiran gambar/PDF-nya. Terima kasih.`;
   window.open(waLink(s.parentPhone, msg), '_blank');
 };
