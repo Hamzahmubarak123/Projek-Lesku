@@ -1,19 +1,22 @@
 // ============================================================
 // LICENSE.JS
-// Inti dari sistem "jual putus tapi bisa diblokir".
+// Inti dari sistem "gerbang" akses: Login (ID+Password) -> cek
+// status lisensi -> baru boleh masuk ke data klien.
 //
 // Alur:
-// 1. App dibuka -> cek VITE_LICENSE_KEY ke License Server (Supabase
-//    terpisah, punya Mubarak).
-// 2. License Server balas salah satu status:
-//      - "demo"    -> app jalan pakai data lokal (localStorage),
-//                     TIDAK connect ke Supabase klien mana pun.
-//      - "active"  -> License Server juga mengirim balik URL + anon key
-//                     Supabase MILIK KLIEN -> app connect ke situ.
-//      - "blocked" -> app tampilkan halaman terkunci, semua fitur mati.
-// 3. Hasil status disimpan di memori (bukan localStorage) supaya
-//    dicek ulang tiap kali app dibuka -> tidak bisa dimanipulasi
-//    dari sisi klien.
+// 1. Guru buka app -> disodori layar Login (email + password).
+// 2. Email+password itu di-cek ke LICENSE SERVER (Supabase - PUNYA
+//    MUBARAK), bukan ke Supabase milik klien. Supabase Auth yang
+//    menyimpan & memverifikasi password secara aman (ter-enkripsi).
+// 3. Setelah login berhasil, sistem ambil baris "licenses" milik
+//    user itu (RLS memastikan user cuma bisa lihat baris miliknya
+//    sendiri, tidak bisa lihat data klien lain):
+//      - status "active"  -> dapat balik URL + anon key Supabase
+//                             KLIEN -> app connect ke situ.
+//      - status "blocked" -> ditolak, langsung logout paksa.
+// 4. Kalau License Server belum dikonfigurasi (development lokal
+//    tanpa .env), otomatis fallback ke Mode Demo TANPA perlu login,
+//    supaya tetap gampang dites tanpa setup Supabase dulu.
 //
 // PENTING: anon key Supabase klien BOLEH dikirim ke browser (memang
 // begitu cara kerja Supabase - keamanan asli ada di RLS policy,
@@ -25,65 +28,95 @@ import { initClientSupabase } from './supabaseClient.js';
 
 const LICENSE_SERVER_URL = import.meta.env.VITE_LICENSE_SERVER_URL;
 const LICENSE_SERVER_ANON_KEY = import.meta.env.VITE_LICENSE_SERVER_ANON_KEY;
-const LICENSE_KEY = import.meta.env.VITE_LICENSE_KEY || 'demo';
 
 export const LICENSE_STATUS = {
   DEMO: 'demo',
   ACTIVE: 'active',
-  BLOCKED: 'blocked'
+  BLOCKED: 'blocked',
+  LOGIN_REQUIRED: 'login_required'
 };
 
 let currentStatus = null;
+let licenseServerClient = null;
+
+export function isLicenseServerConfigured() {
+  return Boolean(LICENSE_SERVER_URL && LICENSE_SERVER_ANON_KEY);
+}
+
+function getLicenseServerClient() {
+  if (!licenseServerClient) licenseServerClient = createClient(LICENSE_SERVER_URL, LICENSE_SERVER_ANON_KEY);
+  return licenseServerClient;
+}
 
 /**
  * Dipanggil sekali di awal (src/main.js) sebelum app dirender.
- * Mengembalikan { status, message }.
+ * Menentukan apakah harus tampil layar Login, Demo, atau langsung Active.
  */
 export async function checkLicense() {
-  // Kalau License Server belum dikonfigurasi (mis. saat development awal),
-  // fallback aman: anggap Demo Mode. App tetap bisa dites tanpa Supabase.
-  if (!LICENSE_SERVER_URL || !LICENSE_SERVER_ANON_KEY || LICENSE_KEY === 'demo') {
+  if (!isLicenseServerConfigured()) {
     currentStatus = LICENSE_STATUS.DEMO;
     return { status: LICENSE_STATUS.DEMO };
   }
 
-  try {
-    const licenseServer = createClient(LICENSE_SERVER_URL, LICENSE_SERVER_ANON_KEY);
-    const { data, error } = await licenseServer
-      .from('licenses')
-      .select('status, supabase_project_url, supabase_anon_key, catatan')
-      .eq('license_key', LICENSE_KEY)
-      .single();
+  const sb = getLicenseServerClient();
+  const { data: { session } } = await sb.auth.getSession();
 
-    if (error || !data) {
-      console.warn('License check gagal, fallback ke Demo Mode:', error);
-      currentStatus = LICENSE_STATUS.DEMO;
-      return { status: LICENSE_STATUS.DEMO, message: 'Tidak bisa memverifikasi lisensi, berjalan sebagai Demo.' };
-    }
+  if (!session) {
+    currentStatus = LICENSE_STATUS.LOGIN_REQUIRED;
+    return { status: LICENSE_STATUS.LOGIN_REQUIRED };
+  }
 
-    if (data.status === LICENSE_STATUS.ACTIVE) {
-      if (!data.supabase_project_url || !data.supabase_anon_key) {
-        currentStatus = LICENSE_STATUS.BLOCKED;
-        return { status: LICENSE_STATUS.BLOCKED, message: 'Konfigurasi klien belum lengkap. Hubungi admin.' };
-      }
-      initClientSupabase(data.supabase_project_url, data.supabase_anon_key);
-      currentStatus = LICENSE_STATUS.ACTIVE;
-      return { status: LICENSE_STATUS.ACTIVE };
-    }
+  return await verifyLicenseForSession();
+}
 
-    if (data.status === LICENSE_STATUS.BLOCKED) {
+/**
+ * Login pakai email+password ke License Server. Dipanggil dari
+ * layar Login (src/pages/login.js).
+ */
+export async function loginWithPassword(email, password) {
+  const sb = getLicenseServerClient();
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    return { status: LICENSE_STATUS.LOGIN_REQUIRED, message: 'Email atau password salah.' };
+  }
+  return await verifyLicenseForSession();
+}
+
+async function verifyLicenseForSession() {
+  const sb = getLicenseServerClient();
+  const { data, error } = await sb
+    .from('licenses')
+    .select('status, supabase_project_url, supabase_anon_key, catatan')
+    .single();
+
+  if (error || !data) {
+    console.warn('License check gagal:', error);
+    currentStatus = LICENSE_STATUS.BLOCKED;
+    return { status: LICENSE_STATUS.BLOCKED, message: 'Akun ini belum terdaftar sebagai klien aktif. Hubungi admin.' };
+  }
+
+  if (data.status === LICENSE_STATUS.ACTIVE) {
+    if (!data.supabase_project_url || !data.supabase_anon_key) {
       currentStatus = LICENSE_STATUS.BLOCKED;
-      return { status: LICENSE_STATUS.BLOCKED, message: data.catatan || 'Akses belum aktif. Silakan hubungi admin.' };
+      return { status: LICENSE_STATUS.BLOCKED, message: 'Konfigurasi klien belum lengkap. Hubungi admin.' };
     }
-
-    // default: demo
-    currentStatus = LICENSE_STATUS.DEMO;
-    return { status: LICENSE_STATUS.DEMO };
-  } catch (err) {
-    console.warn('License check error, fallback ke Demo Mode:', err);
-    currentStatus = LICENSE_STATUS.DEMO;
-    return { status: LICENSE_STATUS.DEMO, message: 'Tidak ada koneksi ke server lisensi, berjalan sebagai Demo.' };
+    initClientSupabase(data.supabase_project_url, data.supabase_anon_key);
+    currentStatus = LICENSE_STATUS.ACTIVE;
+    return { status: LICENSE_STATUS.ACTIVE };
   }
+
+  currentStatus = LICENSE_STATUS.BLOCKED;
+  await sb.auth.signOut();
+  return { status: LICENSE_STATUS.BLOCKED, message: data.catatan || 'Akses belum aktif. Silakan hubungi admin.' };
+}
+
+export async function logout() {
+  if (isLicenseServerConfigured()) {
+    const sb = getLicenseServerClient();
+    await sb.auth.signOut();
+  }
+  currentStatus = null;
+  window.location.reload();
 }
 
 export function getLicenseStatus() {
