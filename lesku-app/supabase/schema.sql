@@ -113,7 +113,7 @@ create table payments (
   id text primary key default gen_random_uuid()::text,
   invoice_no text,
   date date not null,
-  type text default 'Pemasukan', -- 'Pemasukan' | 'Pengeluaran' (untuk fitur Rekap Bulanan)
+  type text default 'Pemasukan', -- kolom lama, tetap ada untuk kompatibilitas (semua payments = Pemasukan)
   student_id text references students(id) on delete set null,
   class_id text references classes(id) on delete set null,
   period text,
@@ -124,6 +124,16 @@ create table payments (
   method text,
   due_date date,
   status text default 'Belum Lunas',
+  note text,
+  created_at timestamptz default now()
+);
+
+create table expenses (
+  id text primary key default gen_random_uuid()::text,
+  date date not null,
+  item_name text,
+  price numeric default 0,
+  qty numeric default 1,
   note text,
   created_at timestamptz default now()
 );
@@ -164,6 +174,7 @@ alter table attendance enable row level security;
 alter table learning enable row level security;
 alter table assessments enable row level security;
 alter table payments enable row level security;
+alter table expenses enable row level security;
 alter table settings enable row level security;
 
 create policy "Akses via anon key (sudah lolos gerbang License Server)" on students for all using (true);
@@ -174,4 +185,5 @@ create policy "Akses via anon key (sudah lolos gerbang License Server)" on atten
 create policy "Akses via anon key (sudah lolos gerbang License Server)" on learning for all using (true);
 create policy "Akses via anon key (sudah lolos gerbang License Server)" on assessments for all using (true);
 create policy "Akses via anon key (sudah lolos gerbang License Server)" on payments for all using (true);
+create policy "Akses via anon key (sudah lolos gerbang License Server)" on expenses for all using (true);
 create policy "Akses via anon key (sudah lolos gerbang License Server)" on settings for all using (true);
