@@ -73,7 +73,7 @@ function renderAppShell(root, isDemo) {
           <div class="topTitle"><h1 id="pageTitle">Dashboard</h1><p id="pageSubtitle"></p></div>
           <div class="actions">
             <button class="btn soft" onclick="window.__lesku_showPage('attendance')">＋ Absensi</button>
-            <button class="btn soft" onclick="window.__lesku_showPage('payments')">＋ Pembayaran</button>
+            <button class="btn soft" onclick="window.__lesku_showPage('expenses')">＋ Pengeluaran</button>
             <button class="btn primary" onclick="window.__lesku_showPage('students')">Tambah Siswa</button>
           </div>
         </div>
