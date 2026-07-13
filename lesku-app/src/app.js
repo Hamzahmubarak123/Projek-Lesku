@@ -14,12 +14,14 @@ import { renderAttendance } from './pages/attendance.js';
 import { renderInvoice } from './pages/invoice.js';
 import { renderReports } from './pages/reports.js';
 import { renderDocuments } from './pages/documents.js';
+import { renderCashflow } from './pages/cashflow.js';
 
 let currentPage = 'dashboard';
 
 const CUSTOM_RENDERERS = {
   dashboard: renderDashboard,
   monthlyRecap: renderMonthlyRecap,
+  cashflow: renderCashflow,
   settings: renderSettings,
   attendance: renderAttendance,
   invoice: renderInvoice,
