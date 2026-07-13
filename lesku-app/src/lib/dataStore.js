@@ -7,12 +7,18 @@
 // Kenapa penting: ini yang bikin Mode Demo & Mode Live bisa
 // pakai KODE HALAMAN YANG SAMA PERSIS. Bedanya cuma di sini.
 //
+// PENTING: kode JS pakai penamaan camelCase (mis. parentName),
+// sedangkan tabel Supabase pakai snake_case (mis. parent_name) -
+// konvensi standar masing-masing dunia. dataStore ini otomatis
+// menerjemahkan bolak-balik SETIAP kali bicara ke Supabase, jadi
+// halaman-halaman lain tidak perlu tahu-menahu soal ini.
+//
 // Semua fungsi bersifat async (pakai Promise) - biar konsisten
 // baik saat manggil localStorage (instan) maupun Supabase (network).
 // ============================================================
 import { LICENSE_STATUS, getLicenseStatus } from './license.js';
 import { getClientSupabase } from './supabaseClient.js';
-import { uid, todayISO } from './utils.js';
+import { uid, todayISO, keysToSnake, keysToCamel } from './utils.js';
 
 const DEMO_STORAGE_KEY = 'lesku_demo_v1';
 
@@ -78,29 +84,35 @@ function ensureDemoState() {
   return demoState;
 }
 
+function isLive() {
+  return getLicenseStatus() === LICENSE_STATUS.ACTIVE;
+}
+
 // ============================================================
 // API PUBLIK - inilah yang dipanggil oleh halaman-halaman (pages/*.js)
+// Semua fungsi menerima/mengembalikan data dalam bentuk camelCase -
+// konversi ke/dari snake_case (untuk Supabase) terjadi otomatis di sini.
 // ============================================================
 
 export async function list(entity, { orderBy } = {}) {
-  if (getLicenseStatus() === LICENSE_STATUS.ACTIVE) {
+  if (isLive()) {
     const sb = getClientSupabase();
     let q = sb.from(ENTITY_TABLE[entity]).select('*');
-    if (orderBy) q = q.order(orderBy, { ascending: false });
+    if (orderBy) q = q.order(toSnakeSafe(orderBy), { ascending: false });
     const { data, error } = await q;
     if (error) throw error;
-    return data;
+    return keysToCamel(data) || [];
   }
   const state = ensureDemoState();
   return state[entity] || [];
 }
 
 export async function create(entity, payload) {
-  if (getLicenseStatus() === LICENSE_STATUS.ACTIVE) {
+  if (isLive()) {
     const sb = getClientSupabase();
-    const { data, error } = await sb.from(ENTITY_TABLE[entity]).insert(payload).select().single();
+    const { data, error } = await sb.from(ENTITY_TABLE[entity]).insert(keysToSnake(payload)).select().single();
     if (error) throw error;
-    return data;
+    return keysToCamel(data);
   }
   const state = ensureDemoState();
   const row = { id: uid(entity.slice(0, 3)), ...payload };
@@ -111,11 +123,11 @@ export async function create(entity, payload) {
 }
 
 export async function update(entity, id, patch) {
-  if (getLicenseStatus() === LICENSE_STATUS.ACTIVE) {
+  if (isLive()) {
     const sb = getClientSupabase();
-    const { data, error } = await sb.from(ENTITY_TABLE[entity]).update(patch).eq('id', id).select().single();
+    const { data, error } = await sb.from(ENTITY_TABLE[entity]).update(keysToSnake(patch)).eq('id', id).select().single();
     if (error) throw error;
-    return data;
+    return keysToCamel(data);
   }
   const state = ensureDemoState();
   const row = (state[entity] || []).find((x) => x.id === id);
@@ -125,7 +137,7 @@ export async function update(entity, id, patch) {
 }
 
 export async function remove(entity, id) {
-  if (getLicenseStatus() === LICENSE_STATUS.ACTIVE) {
+  if (isLive()) {
     const sb = getClientSupabase();
     const { error } = await sb.from(ENTITY_TABLE[entity]).delete().eq('id', id);
     if (error) throw error;
@@ -138,22 +150,22 @@ export async function remove(entity, id) {
 }
 
 export async function getSettings() {
-  if (getLicenseStatus() === LICENSE_STATUS.ACTIVE) {
+  if (isLive()) {
     const sb = getClientSupabase();
     const { data, error } = await sb.from('settings').select('*').single();
     if (error) throw error;
-    return data;
+    return keysToCamel(data);
   }
   const state = ensureDemoState();
   return state.settings || {};
 }
 
 export async function updateSettings(patch) {
-  if (getLicenseStatus() === LICENSE_STATUS.ACTIVE) {
+  if (isLive()) {
     const sb = getClientSupabase();
-    const { data, error } = await sb.from('settings').update(patch).eq('id', 1).select().single();
+    const { data, error } = await sb.from('settings').update(keysToSnake(patch)).eq('id', 1).select().single();
     if (error) throw error;
-    return data;
+    return keysToCamel(data);
   }
   const state = ensureDemoState();
   state.settings = { ...state.settings, ...patch };
@@ -169,4 +181,8 @@ export function resetDemoData() {
   demoState = seedDemoState();
   saveDemoState(demoState);
   return demoState;
+}
+
+function toSnakeSafe(field) {
+  return field.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
 }
