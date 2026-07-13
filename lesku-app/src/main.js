@@ -15,6 +15,8 @@ import './styles/documents.css';
 import { checkLicense, LICENSE_STATUS, logout } from './lib/license.js';
 import { renderLoginScreen } from './pages/login.js';
 import { buildNav, showPage } from './app.js';
+import { applyTheme } from './lib/theme.js';
+import * as store from './lib/dataStore.js';
 
 async function init() {
   const root = document.getElementById('app-root');
@@ -42,6 +44,10 @@ async function init() {
   document.getElementById('hambBtn').addEventListener('click', () => {
     document.getElementById('sidebar').classList.toggle('open');
   });
+
+  const settings = await store.getSettings();
+  applyTheme(settings);
+
   await showPage('dashboard');
 }
 
