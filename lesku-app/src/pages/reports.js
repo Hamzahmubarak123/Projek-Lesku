@@ -58,8 +58,7 @@ window.__lesku_sendReportWA = async () => {
   const type = byId('reportType')?.value;
   const start = byId('reportStart')?.value;
   const end = byId('reportEnd')?.value;
-  const text = byId('reportPreviewBox')?.innerText || '';
-  const msg = `Assalamu'alaikum Bapak/Ibu ${s.parentName || ''}, berikut ${type} untuk Ananda ${s.name || ''} periode ${start} - ${end}.\n\n${text.slice(0, 1300)}\n\nTerima kasih.`;
+  const msg = `Assalamu'alaikum Bapak/Ibu ${s.parentName || ''}, berikut ${type} Ananda ${s.name || ''} periode ${start} - ${end}. Mohon dicek lampiran gambar/PDF-nya. Terima kasih.`;
   window.open(waLink(s.parentPhone, msg), '_blank');
 };
 
