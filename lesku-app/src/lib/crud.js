@@ -106,14 +106,14 @@ async function renderField(key, f, value) {
   return `<div class="field"><label>${label}</label><input id="f_${name}" type="${inputType}" value="${escapeHtml(value ?? '')}" ${req}></div>`;
 }
 
-export async function openForm(key, id = '') {
+export async function openForm(key, id = '', onSaved = null) {
   const schema = schemas[key];
   let row = {};
   if (id) {
     const rows = await store.list(key);
     row = rows.find((x) => x.id === id) || {};
   }
-  editContext = { key, id };
+  editContext = { key, id, onSaved };
   byId('modalTitle').textContent = (id ? 'Edit ' : 'Tambah ') + schema.singular;
   const fieldsHtml = await Promise.all(schema.fields.map((f) => renderField(key, f, row[f[0]])));
   byId('modalBody').innerHTML = `<div class="grid forms">${fieldsHtml.join('')}</div>`;
@@ -125,19 +125,29 @@ export async function openForm(key, id = '') {
 
 export async function submitForm() {
   if (!editContext) return;
-  const { key, id } = editContext;
+  const { key, id, onSaved } = editContext;
   const schema = schemas[key];
   const payload = {};
   schema.fields.forEach((f) => {
-    const el = byId(`f_${f[0]}`);
-    if (el) payload[f[0]] = el.value;
+    const [name, , type] = f;
+    const el = byId(`f_${name}`);
+    if (!el) return;
+    // Field angka (number/currency) yang dibiarkan kosong harus dikirim
+    // sebagai null, BUKAN string kosong "" - kalau tidak, Supabase
+    // menolak dengan error "invalid input syntax for type numeric".
+    if (type === 'number' || type === 'currency') {
+      payload[name] = el.value === '' ? null : Number(el.value);
+    } else {
+      payload[name] = el.value;
+    }
   });
   try {
     if (id) await store.update(key, id, payload);
     else await store.create(key, payload);
     closeModal();
-    await renderRows(key);
+    await renderRows(key); // aman no-op kalau tabel generic-nya tidak sedang tampil (mis. dipanggil dari Rekap Bulanan)
     toast('Data berhasil disimpan.');
+    if (typeof onSaved === 'function') await onSaved();
   } catch (err) {
     console.error(err);
     toast('Gagal menyimpan data. Coba lagi.');
