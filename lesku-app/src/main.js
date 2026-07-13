@@ -86,7 +86,9 @@ function renderAppShell(root, isDemo) {
         <section id="learning" class="section"></section>
         <section id="assessments" class="section"></section>
         <section id="payments" class="section"></section>
+        <section id="expenses" class="section"></section>
         <section id="monthlyRecap" class="section"></section>
+        <section id="cashflow" class="section"></section>
         <section id="invoice" class="section"></section>
         <section id="reports" class="section"></section>
         <section id="documents" class="section"></section>
