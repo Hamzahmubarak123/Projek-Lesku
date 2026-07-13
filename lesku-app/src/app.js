@@ -49,10 +49,23 @@ export async function showPage(page) {
   byId('pageSubtitle').textContent = meta[3];
   byId('sidebar').classList.remove('open');
 
-  if (CUSTOM_PAGES.has(page)) {
-    await CUSTOM_RENDERERS[page]();
-  } else if (schemas[page]) {
-    await renderCrudPage(page);
+  if (!el) {
+    console.warn(`Halaman "${page}" tidak punya <section> di HTML shell (main.js). Cek main.js.`);
+    return;
+  }
+
+  try {
+    if (CUSTOM_PAGES.has(page)) {
+      await CUSTOM_RENDERERS[page]();
+    } else if (schemas[page]) {
+      await renderCrudPage(page);
+    }
+  } catch (err) {
+    console.error(`Gagal render halaman "${page}":`, err);
+    el.innerHTML = `<div class="card"><div class="empty">
+      Terjadi kesalahan saat memuat halaman ini.<br><span class="subtle">${(err.message || String(err)).replace(/</g, '&lt;')}</span><br><br>
+      <button class="btn soft" onclick="window.__lesku_showPage('${page}')">Coba Lagi</button>
+    </div></div>`;
   }
 }
 
